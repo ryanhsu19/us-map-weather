@@ -23,7 +23,11 @@
     <div id="map-wrap">
         <!-- US map will be inlined here -->
         <div id="svg-container"></div>
-        <svg id="overlay"></svg>
+        <svg id="overlay" 
+             viewBox="0 0 1000 589" 
+             preserveAspectRatio="xMidYMid meet"
+             style="width: 100%; height: auto; position: absolute; left: 0; top: 0; pointer-events: none;">
+        </svg>
     </div>
 
     <script type="module">
@@ -48,11 +52,21 @@
         // The rotate array is [-lon0, -lat0]
         const projection = geoAzimuthalEqualArea()
             .rotate([-lon0, -lat0])
-            .scale(1200) // scale to fit the map
-            .translate([500, 300]); // center in overlay
+            .scale(1220) // scale to fit the map
+            .translate([460, 275]); // center in overlay
         
         // Get projected coordinates
         const [x, y] = projection([lonDeg, latDeg]);
+
+        /*
+        // Draw your circles
+        d3.select("svg")
+          .append("circle")
+          .attr("cx", x)
+          .attr("cy", y)
+          .attr("r", 5)
+          .attr("fill", "red");
+        */
 
         // Return the SVG coordinates
         return [x, y];
