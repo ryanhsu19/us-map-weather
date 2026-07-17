@@ -1,0 +1,105 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>US Weather Map with Open-Meteo API</title>
+    <style>
+        body{font-family: Arial, Helvetica, sans-serif; margin:20px}
+        h1{font-size:24px}
+        #map-wrap{position:relative; max-width:1000px}
+        svg#usmap{width:100%; height:auto; display:block}
+        /* highlight states on hover */
+        svg#usmap path{transition:fill .15s}
+        svg#usmap path:hover{fill:#9f9f9f !important; cursor:pointer}
+        #overlay{position:absolute; left:0; top:0; pointer-events:none}
+        .city{pointer-events:auto;}
+        .city circle{fill:rgba(200,30,30,0.9); stroke:#fff; stroke-width:1px}
+        .city text{font-size:12px; fill:#111; background:rgba(255,255,255,0.8)}
+        .city a{color:inherit; text-decoration:none}
+    </style>
+</head>
+<body>
+    <h1>US Weather Map with Open-Meteo API</h1>
+    <div id="map-wrap">
+        <!-- US map will be inlined here -->
+        <div id="svg-container"></div>
+        <svg id="overlay"></svg>
+    </div>
+
+    <script type="module">
+    import { geoAzimuthalEqualArea } from "https://cdn.skypack.dev/d3-geo";
+    
+    // 30 cities allowed to stand alone (city, lat, lon)
+    const cities = [
+        ['New York',40.7128,-74.0060],['Los Angeles',34.0522,-118.2437],['Chicago',41.8781,-87.6298],
+        ['Houston',29.7604,-95.3698],['Phoenix',33.4484,-112.0740],['Philadelphia',39.9526,-75.1652],
+        ['San Antonio',29.4241,-98.4936],['San Diego',32.7157,-117.1611],['Dallas',32.7767,-96.7970],
+        ['San Jose',37.3382,-121.8863],['Austin',30.2672,-97.7431],['Jacksonville',30.3322,-81.6557],
+        ['San Francisco',37.7749,-122.4194],['Columbus',39.9612,-82.9988],['Fort Worth',32.7555,-97.3308],
+        ['Indianapolis',39.7684,-86.1581],['Charlotte',35.2271,-80.8431],['Seattle',47.6062,-122.3321],
+        ['Denver',39.7392,-104.9903],['Washington',38.9072,-77.0369],['Boston',42.3601,-71.0589],
+        ['El Paso',31.7619,-106.4850],['Nashville',36.1627,-86.7816],['Detroit',42.3314,-83.0458],
+        ['Oklahoma City',35.4676,-97.5164],['Portland',45.5152,-122.6784],['Las Vegas',36.1699,-115.1398],
+        ['Louisville',38.2527,-85.7585],['Baltimore',39.2904,-76.6122],['Milwaukee',43.0389,-87.9065]
+    ];
+
+    // Lambert azimuthal equal-area projection
+    function project(latDeg, lonDeg, lat0=45, lon0=-100){
+        // The rotate array is [-lon0, -lat0]
+        const projection = geoAzimuthalEqualArea()
+            .rotate([-lon0, -lat0])
+            .scale(1200) // scale to fit the map
+            .translate([500, 300]); // center in overlay
+        
+        // Get projected coordinates
+        const [x, y] = projection([lonDeg, latDeg]);
+
+        // Return the SVG coordinates
+        return [x, y];
+    }
+
+    // load SVG map, inline it so we can style paths
+    (async function(){
+        const resp = await fetch('images/us.svg');
+        const txt = await resp.text();
+        const container = document.getElementById('svg-container');
+        container.innerHTML = txt;
+        const svg = container.querySelector('svg');
+        svg.id = 'usmap';
+        // resize overlay to match map
+        const wrap = document.getElementById('map-wrap');
+        const overlay = document.getElementById('overlay');
+        const bbox = svg.getBoundingClientRect();
+        overlay.setAttribute('width', bbox.width);
+        overlay.setAttribute('height', bbox.height);
+        overlay.style.width = bbox.width+'px';
+        overlay.style.height = bbox.height+'px';
+        overlay.style.left = svg.offsetLeft+'px';
+        overlay.style.top = svg.offsetTop+'px';
+
+        // place cities
+        for(const c of cities){
+            const [name,lat,lon] = c;
+            const [x,y] = project(lat,lon);
+            const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+            g.setAttribute('class','city');
+            g.setAttribute('transform',`translate(${x},${y})`);
+            // clickable circle linking to Open-Meteo
+            const a = document.createElementNS('http://www.w3.org/2000/svg','a');
+            a.setAttribute('href',`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m`);
+            a.setAttribute('target','_blank');
+            const circle = document.createElementNS('http://www.w3.org/2000/svg','circle');
+            circle.setAttribute('r',5);
+            a.appendChild(circle);
+            g.appendChild(a);
+            const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+            text.setAttribute('x',8);
+            text.setAttribute('y',4);
+            text.textContent = name;
+            g.appendChild(text);
+            overlay.appendChild(g);
+        }
+    })().catch(err=>{console.error(err)});
+    </script>
+</body>
+</html>
